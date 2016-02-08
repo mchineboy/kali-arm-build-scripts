@@ -275,6 +275,9 @@ cat << EOF > ${basedir}/bootp/config.txt
 initramfs initramfs.gz 0x00f00000
 EOF
 
+mkdir -p ${basedir}/root/root/.ssh
+chmod 700 ${basedir}/root/root ${basedir}/root/root/.ssh
+
 ssh-keygen -t rsa -N "" -f ${basedir}/root/root/.ssh/id_rsa 
 mv ${basedir}/root/root/.ssh/id_rsa ~/rpi${cheatid}.id_rsa
 cp ${basedir}/root/root/.ssh/id_rsa.pub ~/rpi${cheatid}.authorized_keys
@@ -388,8 +391,6 @@ do
 
 done	
 EOF
-
-
 
 rm -rf ${basedir}/root/lib/firmware
 cd ${basedir}/root/lib
