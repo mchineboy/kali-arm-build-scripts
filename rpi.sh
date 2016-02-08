@@ -141,12 +141,6 @@ rm -rf /root/.bash_history
 apt-get update
 apt-get clean
 ln -sf /run/resolvconf/resolv.conf /etc/resolv.conf
-update-rc.d ssh enable
-#rm -f /0
-#rm -f /hs_err*
-#rm -f cleanup
-#rm -f /usr/bin/qemu*
-# Let's make this encrypted.. Shall we?
 EOF
 
 chmod +x kali-$architecture/cleanup
