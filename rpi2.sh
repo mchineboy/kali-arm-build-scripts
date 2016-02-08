@@ -219,7 +219,7 @@ mkfs.ext4 /dev/mapper/crypt_sdcard
 # Create the dirs for the partitions and mount them
 mkdir -p ${basedir}/bootp ${basedir}/root
 mount $bootp ${basedir}/bootp
-mount $rootp ${basedir}/root
+mount /dev/mapper/crypt_sdcard ${basedir}/root
 
 echo "Rsyncing rootfs into image file"
 rsync -HPav -q ${basedir}/kali-$architecture/ ${basedir}/root/
