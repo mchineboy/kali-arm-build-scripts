@@ -28,6 +28,9 @@ while [ "$1" != "" ]; do
      -a | --architecture ) shift
 	                       architecture=$1
 						   ;;
+	 -p | --packages     ) shift
+	                       packages=$1
+						   ;;
 	 -? | -h | --help    ) usage
 	                       exit
 						   ;;
