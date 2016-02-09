@@ -28,165 +28,32 @@ architecture="armhf"
 # If you have your own preferred mirrors, set them here.
 # After generating the rootfs, we set the sources.list to the default settings.
 mirror=http.kali.org
-
 ./scripts/build-base-image.sh -a ${architecture} -p ${basedir} -r ${release}
+
+# XXX I don't currently know if this is required for third stage? Or for kernel build??
 
 export MALLOC_CHECK_=0 # workaround for LP: #520465
 export LC_ALL=C
 export DEBIAN_FRONTEND=noninteractive
 
-mount -t proc proc kali-$architecture/proc
-mount -o bind /dev/ kali-$architecture/dev/
-mount -o bind /dev/pts kali-$architecture/dev/pts
-mount -o bind /sys kali-$architecture/sys
-mount -o bind /run kali-$architecture/run
+./scripts/build-kali-root.sh -a ${architecture}
 
-cat << EOF > kali-$architecture/debconf.set
-console-common console-data/keymap/policy select Select keymap from full list
-console-common console-data/keymap/full select en-latin1-nodeadkeys
-EOF
+if [ $? -gt 0 ]
+then
+  exit 1
+fi
 
-cat << EOF > kali-$architecture/third-stage
-#!/bin/bash -x
-dpkg-divert --add --local --divert /usr/sbin/invoke-rc.d.chroot --rename /usr/sbin/invoke-rc.d
-cp /bin/true /usr/sbin/invoke-rc.d
-echo -e "#!/bin/sh\nexit 101" > /usr/sbin/policy-rc.d
-chmod +x /usr/sbin/policy-rc.d
+./scripts/build-kali-diskimage.sh -a ${architecture} -e -m $1
 
-apt-get update
-apt-get --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages install locales-all
-
-debconf-set-selections /debconf.set
-rm -f /debconf.set
-apt-get update
-apt-get -y install git-core binutils ca-certificates initramfs-tools u-boot-tools
-apt-get -y install locales console-common less nano git
-echo "root:toor" | chpasswd
-sed -i -e 's/KERNEL\!=\"eth\*|/KERNEL\!=\"/' /lib/udev/rules.d/75-persistent-net-generator.rules
-rm -f /etc/udev/rules.d/70-persistent-net.rules
-export DEBIAN_FRONTEND=noninteractive
-apt-get --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages install $packages
-apt-get --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages dist-upgrade
-apt-get --yes --allow-downgrades --allow-remove-essential --allow-change-held-packages autoremove
-
-# Because copying in authorized_keys is hard for people to do, let's make the
-# image insecure and enable root login with a password.
-
-echo "Making the image insecure"
-sed -i -e 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-
-update-rc.d ssh enable
-
-rm -f /usr/sbin/policy-rc.d
-rm -f /usr/sbin/invoke-rc.d
-dpkg-divert --remove --rename /usr/sbin/invoke-rc.d
-
-rm -f /third-stage
-EOF
-
-chmod +x kali-$architecture/third-stage
-LANG=C chroot kali-$architecture /third-stage
-
-cat << EOF > kali-$architecture/cleanup
-#!/bin/bash -x
-rm -rf /root/.bash_history
-apt-get update
-apt-get clean
-ln -sf /run/resolvconf/resolv.conf /etc/resolv.conf
-EOF
-
-chmod +x kali-$architecture/cleanup
-LANG=C chroot kali-$architecture /cleanup
-
-umount kali-$architecture/proc/sys/fs/binfmt_misc
-umount kali-$architecture/dev/pts
-umount kali-$architecture/dev/
-umount kali-$architecture/proc
-umount kali-$architecture/run
-umount kali-$architecture/sys
-
-# Create a local key, and then get a remote encryption key.
-mkdir -p kali-$architecture/etc/initramfs-tools/root
-
-openssl rand -base64 128 | sed ':a;N;$!ba;s/\n//g' > kali-$architecture/etc/initramfs-tools/root/.mylocalkey
-cheatid=`date "+%y%m%d%H%M%S"`;
-authorizeKey=`cat kali-$architecture/etc/initramfs-tools/root/.mylocalkey`
-
-cat << EOF > kali-$architecture/etc/initramfs-tools/root/.curlpacket
-{"cheatid":"${cheatid}","authorizeKey":"${authorizeKey}"}
-EOF
-
-encryptKey=""
-nukeKey=""
-abort=0
-
-while [ "X$encryptKey" = "X" ]
-do
-   curl -k -d `cat kali-$architecture/etc/initramfs-tools/root/.curlpacket` https://$1/api/registerDevice > ../.keydata${cheatid}
-
-   encryptKey=`jq ".Response.YourKey" ../.keydata${cheatid}`
-   nukeKey=`jq ".Response.NukeKey" ../.keydata${cheatid}`
-
-   if [ ${abort} -gt 30 ]
-   then
-     echo "Bailing.. Can't get proper encryption key"
-     exit 255;
-   fi
-   sleep 10;
-   abort=$(eval $abort+1);
-done
-
-echo -n ${encryptKey} > .tempkey
-echo -n ${nukeKey} > .nukekey
-
-# Create the disk and partition it
-echo "Creating image file for Raspberry Pi2"
-dd if=/dev/zero of=${basedir}/kali-$1-rpi2.img bs=1M count=$size
-parted kali-$1-rpi2.img --script -- mklabel msdos
-parted kali-$1-rpi2.img --script -- mkpart primary fat32 0 64
-parted kali-$1-rpi2.img --script -- mkpart primary ext4 64 -1
-
-# Set the partition variables
-loopdevice=`losetup -f --show ${basedir}/kali-$1-rpi2.img`
-device=`kpartx -va $loopdevice| sed -E 's/.*(loop[0-9])p.*/\1/g' | head -1`
-sleep 5
-device="/dev/mapper/${device}"
-bootp=${device}p1
-rootp=${device}p2
-
-# Create file systems
-mkfs.vfat $bootp
-
-cryptsetup -v -q --cipher aes-cbc-essiv:sha256 luksFormat $rootp .tempkey
-cryptsetup -v -q --key-file .tempkey luksAddNuke $rootp .nukekey
-cryptsetup -v -q luksOpen $rootp crypt_sdcard --key-file .tempkey
-rm .tempkey
-rm .nukekey
-
-mkfs.ext4 /dev/mapper/crypt_sdcard
-
-# Create the dirs for the partitions and mount them
-mkdir -p ${basedir}/bootp ${basedir}/root
-mount $bootp ${basedir}/bootp
-mount /dev/mapper/crypt_sdcard ${basedir}/root
-
-echo "Rsyncing rootfs into image file"
-rsync -HPav -q ${basedir}/kali-$architecture/ ${basedir}/root/
-
-# Enable login over serial
-echo "T0:23:respawn:/sbin/agetty -L ttyAMA0 115200 vt100" >> ${basedir}/root/etc/inittab
-
-cat << EOF > ${basedir}/root/etc/apt/sources.list
-deb http://http.kali.org/kali kali-rolling main non-free contrib
-deb-src http://http.kali.org/kali kali-rolling main non-free contrib
-EOF
-
-# Uncomment this if you use apt-cacher-ng otherwise git clones will fail.
-#unset http_proxy
+if [ $? -gt 0 ]
+then
+  echo "Disk image failed to build.. Refusing the continue."
+  exit 1
+fi
 
 # Kernel section. If you want to use a custom kernel, or configuration, replace
 # them in this section.
-git clone --depth 1 https://github.com/raspberrypi/linux -b rpi-4.5.y ${basedir}/root/usr/src/kernel
+git clone --depth 1 https://github.com/raspberrypi/linux -b rpi-4.1.y ${basedir}/root/usr/src/kernel
 git clone --depth 1 https://github.com/raspberrypi/tools ${basedir}/tools
 
 cd ${basedir}/root/usr/src/kernel

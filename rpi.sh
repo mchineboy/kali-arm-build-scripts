@@ -40,8 +40,18 @@ export DEBIAN_FRONTEND=noninteractive
 
 ./scripts/build-kali-root.sh -a ${architecture}
 
+if [ $? -gt 0 ]
+then
+  exit 1
+fi
+
 ./scripts/build-kali-diskimage.sh -a ${architecture} -e -m $1
 
+if [ $? -gt 0 ]
+then
+  echo "Disk image failed to build.. Refusing the continue."
+  exit 1
+fi
 
 # Kernel section. If you want to use a custom kernel, or configuration, replace
 # them in this section.
