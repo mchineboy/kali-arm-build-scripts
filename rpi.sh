@@ -40,7 +40,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 cd ${basedir}
 
-../scripts/build-kali-root.sh -a ${architecture} -p ${packages}
+../scripts/build-kali-root.sh -a ${architecture} -p "${packages}"
 
 if [ $? -gt 0 ]
 then
