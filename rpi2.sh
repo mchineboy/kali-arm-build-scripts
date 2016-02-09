@@ -14,13 +14,13 @@ basedir=`pwd`/rpi2-rolling
 # script will throw an error, but will still continue on, and create an unusable
 # image, keep that in mind.
 
-arm="abootimg cgpt fake-hwclock ntpdate u-boot-tools vboot-utils vboot-kernel-utils"
-base="e2fsprogs initramfs-tools kali-defaults kali-menu parted sudo usbutils kali-linux-full"
+arm="abootimg fake-hwclock ntpdate u-boot-tools"
+base="e2fsprogs initramfs-tools kali-defaults kali-menu parted sudo usbutils dropbear cryptsetup busybox jq"
 desktop="fonts-croscore fonts-crosextra-caladea fonts-crosextra-carlito gnome-theme-kali gtk3-engines-xfce kali-desktop-xfce kali-root-login lightdm network-manager network-manager-gnome xfce4 xserver-xorg-video-fbdev"
-tools="aircrack-ng ethtool hydra john libnfc-bin mfoc nmap passing-the-hash sqlmap usbutils winexe wireshark"
+tools="kali-linux-full winexe"
 services="apache2 openssh-server"
 extras="iceweasel xfce4-terminal wpasupplicant"
-# kernel sauces take up space yo.
+
 size=14500 # Size of image in megabytes
 
 packages="${arm} ${base} ${desktop} ${tools} ${services} ${extras}"
@@ -29,58 +29,7 @@ architecture="armhf"
 # After generating the rootfs, we set the sources.list to the default settings.
 mirror=http.kali.org
 
-# Set this to use an http proxy, like apt-cacher-ng, and uncomment further down
-# to unset it.
-#export http_proxy="http://localhost:3142/"
-
-if [ ! -d "${basedir}" ]
-then
-	mkdir -p ${basedir}
-fi
-
-cd ${basedir}
-
-if [ ! -f "kali-$architecture/usr/bin/qemu-arm-static" ]
-then
-	# create the rootfs - not much to modify here, except maybe the hostname.
-	debootstrap --foreign --arch $architecture kali-rolling kali-$architecture http://$mirror/kali
-
-	cp /usr/bin/qemu-arm-static kali-$architecture/usr/bin/
-fi
-
-grep -q rns-rpi kali-$architecture/etc/hostname
-
-if [ $? -gt 0 ]
-then
-	LANG=C chroot kali-$architecture /debootstrap/debootstrap --second-stage
-	cat << EOF > kali-$architecture/etc/apt/sources.list
-deb http://$mirror/kali kali-rolling main contrib non-free
-EOF
-
-	# Set hostname
-	echo "rns-rpi" > kali-$architecture/etc/hostname
-
-fi
-
-# So X doesn't complain, we add kali to hosts
-cat << EOF > kali-$architecture/etc/hosts
-127.0.0.1       rns-rpi    localhost
-::1             localhost ip6-localhost ip6-loopback
-fe00::0         ip6-localnet
-ff00::0         ip6-mcastprefix
-ff02::1         ip6-allnodes
-ff02::2         ip6-allrouters
-EOF
-
-cat << EOF > kali-$architecture/etc/network/interfaces
-auto lo
-iface lo inet loopback
-
-auto eth0
-iface eth0 inet dhcp
-EOF
-
-cp /etc/resolf.conf kali-$architecture/etc/resolv.conf
+./scripts/build-base-image.sh -a ${architecture} -p ${basedir} -r ${release}
 
 export MALLOC_CHECK_=0 # workaround for LP: #520465
 export LC_ALL=C

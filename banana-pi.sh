@@ -42,45 +42,7 @@ architecture="armhf"
 # After generating the rootfs, we set the sources.list to the default settings.
 mirror=http.kali.org
 
-# Set this to use an http proxy, like apt-cacher-ng, and uncomment further down
-# to unset it.
-#export http_proxy="http://localhost:3142/"
-
-mkdir -p ${basedir}
-cd ${basedir}
-
-# create the rootfs - not much to modify here, except maybe the hostname.
-debootstrap --foreign --arch $architecture kali-rolling kali-$architecture http://$mirror/kali
-
-cp /usr/bin/qemu-arm-static kali-$architecture/usr/bin/
-
-LANG=C chroot kali-$architecture /debootstrap/debootstrap --second-stage
-cat << EOF > kali-$architecture/etc/apt/sources.list
-deb http://$mirror/kali kali-rolling main contrib non-free
-EOF
-
-echo "kali" > kali-$architecture/etc/hostname
-
-cat << EOF > kali-$architecture/etc/hosts
-127.0.0.1       kali    localhost
-::1             localhost ip6-localhost ip6-loopback
-fe00::0         ip6-localnet
-ff00::0         ip6-mcastprefix
-ff02::1         ip6-allnodes
-ff02::2         ip6-allrouters
-EOF
-
-cat << EOF > kali-$architecture/etc/network/interfaces
-auto lo
-iface lo inet loopback
-
-auto eth0
-iface eth0 inet dhcp
-EOF
-
-cat << EOF > kali-$architecture/etc/resolv.conf
-nameserver 8.8.8.8
-EOF
+./scripts/build-base-image.sh -a ${architecture} -p ${basedir} -r ${release}
 
 export MALLOC_CHECK_=0 # workaround for LP: #520465
 export LC_ALL=C
