@@ -11,7 +11,7 @@
 ##                 :
 ##                 :
 ##                 :
-##                 :
+## Description     : Builds a basic bootstrapped filesystem for kali
 #######################################################################
 
 function usage 
@@ -91,8 +91,6 @@ cd ${buildpath}
 debootstrap --foreign --arch ${architecture} kali-${release} kali-${architecture} http://${mirror}/kali
 
 cp /usr/bin/qemu-arm-static kali-${architecture}/usr/bin/
-
-grep -q rns-rpi kali-${architecture}/etc/hostname
 
 LANG=C chroot kali-${architecture} /debootstrap/debootstrap --second-stage
 cat << EOF > kali-${architecture}/etc/apt/sources.list

@@ -1,50 +1,50 @@
 #!/bin/bash
 
-# This is the Raspberry Pi Kali ARM build script - http://www.kali.org/downloads
-# A trusted Kali Linux image created by Offensive Security - http://www.offensive-security.com
+#######################################################################
+## Script          : build-arm-kernel.sh
+## Author          : Tyler Hardison <tyler@seraph-net.net>
+## Acknowledgments : Offensive Security is the original author. I'm
+##                 : just taking their original work and making it 
+##                 : more modular.
+## Changelog       : <2016.2.9-TH> Creation of original script.
+##                 :
+##                 :
+##                 :
+##                 :
+## Description     : Takes a bootstrapped fs and sprinkles kali magic
+#######################################################################
 
-basedir=`pwd`/rpi-rolling
+function usage 
+{
+	echo "usage: build-kali-root.sh -a architecture"
+	echo 
+	echo "-a architecture (required) armel,armhf,..."
+}
 
-# Package installations for various sections.
-# This will build a minimal XFCE Kali system with the top 10 tools.
-# This is the section to edit if you would like to add more packages.
-# See http://www.kali.org/new/kali-linux-metapackages/ for meta packages you can
-# use. You can also install packages, using just the package name, but keep in
-# mind that not all packages work on ARM! If you specify one of those, the
-# script will throw an error, but will still continue on, and create an unusable
-# image, keep that in mind.
+# parse arguments
 
-arm="abootimg fake-hwclock ntpdate u-boot-tools"
-base="e2fsprogs initramfs-tools kali-defaults kali-menu parted sudo usbutils dropbear cryptsetup busybox jq"
-desktop="fonts-croscore fonts-crosextra-caladea fonts-crosextra-carlito gnome-theme-kali gtk3-engines-xfce kali-desktop-xfce kali-root-login lightdm network-manager network-manager-gnome xfce4 xserver-xorg-video-fbdev"
-tools="kali-linux-full winexe"
-services="apache2 openssh-server"
-extras="iceweasel xfce4-terminal wpasupplicant"
+while [ "$1" != "" ]; do
+   case $1 in 
+     -a | --architecture ) shift
+	                       architecture=$1
+						   ;;
+	 -d | --device       ) shift
+						   device=$1
+						   ;;
+	 -? | -h | --help    ) usage
+	                       exit
+						   ;;
+	 * )                   usage
+	                       exit 1
+   esac
+   shift
+done   
 
-size=14500 # Size of image in megabytes
-
-packages="${arm} ${base} ${desktop} ${tools} ${services} ${extras}"
-architecture="armel"
-# If you have your own preferred mirrors, set them here.
-# After generating the rootfs, we set the sources.list to the default settings.
-mirror=http.kali.org
-release=rolling
-
-./scripts/build-base-image.sh -a ${architecture} -p ${basedir} -r ${release}
-
-# XXX I don't currently know if this is required for third stage? Or for kernel build??
-
-export MALLOC_CHECK_=0 # workaround for LP: #520465
-export LC_ALL=C
-export DEBIAN_FRONTEND=noninteractive
-
-./scripts/build-kali-root.sh -a ${architecture}
-
-./scripts/build-kali-diskimage.sh -a ${architecture} -e -m $1
-
-
-# Kernel section. If you want to use a custom kernel, or configuration, replace
-# them in this section.
+if [ "X${architecture}" = "X" ]
+then
+  usage
+  exit 1
+fi  
 git clone --depth 1 https://github.com/raspberrypi/linux -b rpi-4.1.y ${basedir}/root/usr/src/kernel
 git clone --depth 1 https://github.com/raspberrypi/tools ${basedir}/tools
 

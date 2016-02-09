@@ -1,11 +1,8 @@
 #!/bin/bash
 
-if [[ $# -eq 0 ]] ; then
-    echo "Please pass version number, e.g. $0 2.0"
-    exit 0
-fi
+release=rolling
 
-basedir=`pwd`/bananapi-$1
+basedir=`pwd`/bananapi-${release}
 
 # Make sure that the cross compiler can be found in the path before we do
 # anything else, that way the builds don't fail half way through.
