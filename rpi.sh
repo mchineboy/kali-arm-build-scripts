@@ -40,14 +40,14 @@ export DEBIAN_FRONTEND=noninteractive
 
 cd ${basedir}
 
-./scripts/build-kali-root.sh -a ${architecture}
+../scripts/build-kali-root.sh -a ${architecture}
 
 if [ $? -gt 0 ]
 then
   exit 1
 fi
 
-./scripts/build-kali-diskimage.sh -a ${architecture} -e -m $1
+../scripts/build-kali-diskimage.sh -a ${architecture} -e -m $1
 
 if [ $? -gt 0 ]
 then
