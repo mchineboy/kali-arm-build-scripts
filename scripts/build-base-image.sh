@@ -118,7 +118,7 @@ auto eth0
 iface eth0 inet dhcp
 EOF
 
-cp /etc/resolf.conf kali-${architecture}/etc/resolv.conf
+cp /etc/resolv.conf kali-${architecture}/etc/resolv.conf
 
 # Base image is complete.
 

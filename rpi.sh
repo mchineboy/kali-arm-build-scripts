@@ -38,6 +38,8 @@ export MALLOC_CHECK_=0 # workaround for LP: #520465
 export LC_ALL=C
 export DEBIAN_FRONTEND=noninteractive
 
+cd ${basedir}
+
 ./scripts/build-kali-root.sh -a ${architecture}
 
 if [ $? -gt 0 ]
