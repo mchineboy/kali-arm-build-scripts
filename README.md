@@ -36,3 +36,9 @@ On 64bit systems, after the script finishes running, you will have 3 files
 located in ~/arm-stuff/kali-arm-build-scripts/chromebook-1.0; the sha1sum for
 the uncompressed image file, the image file compressed via xz, and the sha1sum
 file for the compressed image file.
+
+Note from Tyler: I've moved my work to https://bitbucket.org/mchineboy007/kali-arm-build-scripts 
+My reasons for this are numerous. But the biggest reason is the recent changes within the 
+GitHub organization itself. When they pull their collective heads out of their asses, maybe
+I'll come back. I wasn't a big "enterprise" customer, so they likely won't care. But I 
+couldn't justify giving my money to these people anymore.
